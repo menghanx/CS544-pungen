@@ -4,7 +4,7 @@ import argparse
 import json
 from collections import defaultdict
 import fuzzy
-
+   
 from fairseq import options
 
 from pungen.retriever import Retriever
