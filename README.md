@@ -1,4 +1,4 @@
-# Pun Generation with Surprise AAAAAAAAAAA10000
+# Pun Generation with Surprise AAAAAAAAAAA10000101010
 This repo contains code and data for the paper
 [Pun Generation with Surprise](https://arxiv.org/abs/1904.06828).
 
