@@ -59,7 +59,8 @@ def main(args):
     retriever = Retriever(args.doc_file, path=args.retriever_model, overwrite=args.overwrite_retriever_model)
 
     if args.system.startswith('rule') or args.system == 'keywords' or args.scorer in ('goodman',):
-        skipgram = SkipGram.load_model(args.skipgram_model[0], args.skipgram_model[1], embedding_size=args.skipgram_embed_size, cpu=args.cpu)
+        # skipgram = SkipGram.load_model(args.skipgram_model[0], args.skipgram_model[1], embedding_size=args.skipgram_embed_size, cpu=args.cpu)
+        skipgram = None
     else:
         skipgram = None
 
@@ -89,8 +90,8 @@ def main(args):
         d[e['pun_word']] = e
     puns = d.values()
     # Sorting by quality of pun words
-    dmeta = fuzzy.DMetaphone()
-    homophone = lambda x, y: float(dmeta(x)[0] == dmeta(y)[0])
+#     dmeta = fuzzy.DMetaphone()
+    homophone = lambda x, y: float(fuzzy.nysiis(x) == fuzzy.nysiis(y))
     length = lambda x, y: float(len(x) > 2 and len(y) > 2)
     freq = lambda x, y: unigram_model.word_counts.get(x, 0) * unigram_model.word_counts.get(y, 0)
     puns = sorted(puns, key=lambda e: (length(e['pun_word'], e['alter_word']),
@@ -131,5 +132,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    logging_config(os.path.join(args.outdir, 'generate_pun.log'), console_level=logging.INFO)
+    logging_config(os.path.join(args.outdir, 'generate_pun.log'), console_level=logging.DEBUG)
     main(args)
