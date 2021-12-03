@@ -94,13 +94,7 @@ python generate_pun.py data/bookcorpus/edit/bin/data \
 	--max-num-examples 100
 ```
 
-## Reference
-If you use the annotated SemEval pun dataset, please cite our paper:
+## Analyze grammar score
 ```
-@inproceedings{he2019pun,
-    title={Pun Generation with Surprise},
-    author={He He and Nanyun Peng and Percy Liang},
-    booktitle={North American Association for Computational Linguistics (NAACL)},
-    year={2019}
-}
+python grammar.py --input results/new_result/result.json --output results/new_result/scored_result.json
 ```
