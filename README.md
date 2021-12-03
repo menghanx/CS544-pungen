@@ -46,8 +46,8 @@ done
 
 python -m pungen.preprocess --source-lang src --target-lang tgt \
 	--destdir data/bookcorpus/edit/bin/data --thresholdtgt 80 --thresholdsrc 80 \
-	--validpref data/bookcorpus/edit/valid \
-	--trainpref data/bookcorpus/edit/train \
+	--validpref /tmp/edit/valid \
+	--trainpref /tmp/edit/train \
 	--workers 8
 ```
 
