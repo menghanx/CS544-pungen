@@ -1,18 +1,18 @@
-# Pun Generation with Surprise
-This repo contains code and data for the paper
-[Pun Generation with Surprise](https://arxiv.org/abs/1904.06828).
+# Final Presentation Video
+https://www.youtube.com/watch?v=m5_Nk-UQlxE
 
 ## Requirements
+- Cuda 11 (Version we used for the project)
 - Python 3.6
-- Pytorch 0.4
 ```
-conda install pytorch=0.4.0 torchvision -c pytorch
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+python nltk_download_data.py
 ```
 - Fairseq(-py)
 ```
 git clone -b pungen https://github.com/hhexiy/fairseq.git
 cd fairseq
-pip install -r requirements.txt
 python setup.py build develop
 ```
 - Pretrained WikiText-103 model from Fairseq
@@ -21,34 +21,24 @@ curl --create-dirs --output models/wikitext/model https://dl.fbaipublicfiles.com
 tar xjf models/wikitext/model -C models/wikitext
 rm models/wikitext/model
 ```
-
+- Java SDK
+```
+apt-get install openjdk-8-jdk
+pip install --upgrade language_tool_python
+```
 ## Training
+
 ### Word relatedness model
-We approximate relatedness between a pair of words with a long-distance skip-gram model trained on BookCorpus sentences.
-The original BookCorpus data is parsed by `scripts/preprocess_raw_text.py`
-and you can see the sample file in `sample_data/bookcorpus/raw/train.txt`.
-
-Preprocess bookcorpus data:
-```
-python -m pungen.wordvec.preprocess --data-dir data/bookcorpus/skipgram \
-	--corpus data/bookcorpus/raw/train.txt \
-	--min-dist 5 --max-dist 10 --threshold 80 \
-	--vocab data/bookcorpus/skipgram/dict.txt
-```
-
-Train skip-gram model:
-```
-python -m pungen.wordvec.train --weights --cuda --data data/bookcorpus/skipgram/train.bin \
-    --save_dir models/bookcorpus/skipgram \
-    --mb 3500 --epoch 15 \
-    --vocab data/bookcorpus/skipgram/dict.txt
-```
+Skipgram model is pre-trained and ready to use
 
 ### Edit model
 The edit model takes a word and a template (masked sentence) and combine the two coherently.
 
 Preprocess data:
 ```
+python scripts/parsed_to_tokenized.py --input data/train.txt --output /tmp/train.tokenized.txt
+python scripts/parsed_to_tokenized.py --input data/valid.txt --output /tmp/valid.tokenized.txt
+
 for split in train valid; do \
 	PYTHONPATH=. python scripts/make_src_tgt_files.py -i data/bookcorpus/raw/$split.txt \
         -o data/bookcorpus/edit/$split --delete-frac 0.5 --window-size 2 --random-window-size; \
@@ -59,6 +49,14 @@ python -m pungen.preprocess --source-lang src --target-lang tgt \
 	--validpref data/bookcorpus/edit/valid \
 	--trainpref data/bookcorpus/edit/train \
 	--workers 8
+```
+
+### Retriever
+Build a sentence retriever based on Bookcorpus.
+The input should have a tokenized sentence per line.
+```
+cat /tmp/train.tokenized.txt /tmp/valid.tokenized.txt > /tmp/sent.tokenized.txt
+python -m pungen.retriever --doc-file /tmp/sent.tokenized.txt --path retriever.pkl --overwrite
 ```
 
 Training:
@@ -73,49 +71,25 @@ python -m pungen.train data/bookcorpus/edit/bin/data -a lstm \
     --save-dir models/bookcorpus/edit/deleted --no-progress-bar --log-interval 5000
 ```
 
-### Retriever
-Build a sentence retriever based on Bookcorpus.
-The input should have a tokenized sentence per line.
-```
-python -m pungen.retriever --doc-file data/bookcorpus/raw/sent.tokenized.txt \
-    --path models/bookcorpus/retriever.pkl --overwrite
-```
-
-## Analyze what makes a pun funny
-Compute correlation between local-global suprise scores and human funniness ratings.
-We provide our annotated dataset in `data/funniness_annotation`:
-- `analysis_pun_scores.txt`: sentences annotated with funniness scores from 1 to 5.
-- `analysis_zscored_pun_scores.txt`: the same data where scores are standardized for each annotator.
-```
-python eval_scoring_func.py --human-eval data/funniness_annotation/analysis_zscored_pun_scores.txt \
-	--lm-path models/wikitext/wiki103.pt --word-counts-path models/wikitext/dict.txt \
-    --skipgram-model data/bookcorpus/skipgram/dict.txt \
-                     models/bookcorpus/skipgram/sgns-e15.pt \
-    --outdir results/pun-analysis/analysis_zscored \
-    --features grammar ratio --analysis --ignore-cache  
-```
 
 ## Generate puns
-We generate puns given a pair of pun word and alternative word.
-We support pun generation with the following methods specified by the `system` argument.
-- `rule`: the SURGEN method described in the paper 
-- `rule+neural`: in the last step of SURGEN, use a neural combiner to edit the topic words
-- `retrieve`: retrieve a sentence containing the pun word
-- `retrieve+swap`: retrieve a sentence containing the alternative word and replace it with the pun word
-For arguments controlling the neural generator (e.g., `--beam`, `--nbest`), see `fairseq.options`.
-All results and logs are saved in `outdir`.
+We generate puns with the following methods specified by the `system` argument.
+- `rule`: the SURGEN method Retrieve+Swap+Topic described in the paper we followed 
+
+All results and logs are saved in `reuslts`.
 ```
 python generate_pun.py data/bookcorpus/edit/bin/data \
-	--path models/bookcorpus/edit/delete/checkpoint_best.pt \
+	--path models/checkpoint_best.pt \
 	--beam 20 --nbest 1 --unkpen 100 \
 	--system rule --task edit \
-	--retriever-model models/bookcorpus/retriever.pkl --doc-file data/bookcorpus/raw/sent.tokenized.txt \
-	--lm-path models/wikitext/wiki103.pt --word-counts-path models/wikitext/dict.txt \
-	--skipgram-model data/bookcorpus/skipgram/dict.txt models/bookcorpus/skipgram/sgns-e15.pt \
+	--retriever-model retriever.pkl --doc-file /tmp/sent.tokenized.txt \
+	--lm-path models/wikitext/wiki103.pt \
+	--word-counts-path models/wikitext/dict.txt \
+	--skipgram-model skipgram/dict.txt skipgram/sgns-e15.pt \
 	--num-candidates 500 --num-templates 100 \
 	--num-topic-word 100 --type-consistency-threshold 0.3 \
-	--pun-words data/semeval/hetero/dev.json \
-	--outdir results/semeval/hetero/dev/rule \
+	--pun-words pun-data/test.json \
+	--outdir results/new_result \
 	--scorer random \
 	--max-num-examples 100
 ```
