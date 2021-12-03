@@ -38,14 +38,16 @@ Preprocess data:
 ```
 python scripts/parsed_to_tokenized.py --input data/train.txt --output /tmp/train.tokenized.txt
 python scripts/parsed_to_tokenized.py --input data/valid.txt --output /tmp/valid.tokenized.txt
+cat /tmp/train.tokenized.txt /tmp/valid.tokenized.txt > /tmp/sent.tokenized.txt
 
 for split in train valid; do \
-	PYTHONPATH=. python scripts/make_src_tgt_files.py -i data/bookcorpus/raw/$split.txt \
-        -o data/bookcorpus/edit/$split --delete-frac 0.5 --window-size 2 --random-window-size; \
+	PYTHONPATH=. python scripts/make_src_tgt_files.py -i data/$split.txt \
+        -o /tmp/edit/$split --delete-frac 0.5 \
+		--window-size 2 --random-window-size; \
 done
 
 python -m pungen.preprocess --source-lang src --target-lang tgt \
-	--destdir data/bookcorpus/edit/bin/data --thresholdtgt 80 --thresholdsrc 80 \
+	--destdir /tmp/edit/bin/data --thresholdtgt 80 --thresholdsrc 80 \
 	--validpref /tmp/edit/valid \
 	--trainpref /tmp/edit/train \
 	--workers 8
@@ -55,20 +57,19 @@ python -m pungen.preprocess --source-lang src --target-lang tgt \
 Build a sentence retriever based on Bookcorpus.
 The input should have a tokenized sentence per line.
 ```
-cat /tmp/train.tokenized.txt /tmp/valid.tokenized.txt > /tmp/sent.tokenized.txt
 python -m pungen.retriever --doc-file /tmp/sent.tokenized.txt --path retriever.pkl --overwrite
 ```
 
 Training:
 ```
-python -m pungen.train data/bookcorpus/edit/bin/data -a lstm \
+python -m pungen.train /tmp/edit/bin/data -a lstm \
     --source-lang src --target-lang tgt \
     --task edit --insert deleted --combine token \
     --criterion cross_entropy \
     --encoder lstm --decoder-attention True \
     --optimizer adagrad --lr 0.01 --lr-scheduler reduce_lr_on_plateau --lr-shrink 0.5 \
     --clip-norm 5 --max-epoch 50 --max-tokens 7000 --no-epoch-checkpoints \
-    --save-dir models/bookcorpus/edit/deleted --no-progress-bar --log-interval 5000
+    --save-dir models --no-progress-bar --log-interval 5000
 ```
 
 
