@@ -4,6 +4,7 @@ import argparse
 import json
 from collections import defaultdict
 import fuzzy
+import language_tool_python
    
 from fairseq import options
 
@@ -90,13 +91,19 @@ def main(args):
     puns = d.values()
     # Sorting by quality of pun words
     dmeta = fuzzy.DMetaphone()
-    homophone = lambda x, y: float(dmeta(x)[0] == dmeta(y)[0])
+    homophone = lambda x, y: float(dmeta(x) == dmeta(y))
     length = lambda x, y: float(len(x) > 2 and len(y) > 2)
     freq = lambda x, y: unigram_model.word_counts.get(x, 0) * unigram_model.word_counts.get(y, 0)
     puns = sorted(puns, key=lambda e: (length(e['pun_word'], e['alter_word']),
-                                       homophone(e['pun_word'], e['alter_word']),
+                                       m3(e['pun_word'], e['alter_word']),
                                        freq(e['pun_word'], e['alter_word'])),
                   reverse=True)
+    # puns = sorted(puns, key=lambda e: (length(e['pun_word'], e['alter_word']),
+    #                                    homophone(e['pun_word'], e['alter_word']),
+    #                                    freq(e['pun_word'], e['alter_word'])),
+    #               reverse=True)
+#     json.dump(puns_dm, open('pun2.json', 'w'))
+    
     num_success = 0
     processed_examples = []
     for example in puns:
@@ -128,8 +135,19 @@ def main(args):
 
     json.dump(processed_examples, open(os.path.join(args.outdir, 'results.json'), 'w'))
 
+    
+def m3(w1, w2):
+    eval_output = os.popen(f'java Metaphone3 {w1} {w2}').read()
+    results = eval_output.split()
+    if results[0] == 'true' or results[1] == 'true':
+        return float(True)
+    else:
+        return float(False)
+        
 
 if __name__ == '__main__':
     args = parse_args()
     logging_config(os.path.join(args.outdir, 'generate_pun.log'), console_level=logging.INFO)
     main(args)
+#     test("Test")
+#        print (homophone('two','too'))
