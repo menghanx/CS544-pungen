@@ -97,5 +97,5 @@ python generate_pun.py combiner-data \
 
 ## Analyze grammar score
 ```
-python grammar.py --input results/new_result/result.json --output results/new_result/scored_result.json
+python grammar.py --input results/new_result/results.json --output results/new_result/scored_results.json
 ```
