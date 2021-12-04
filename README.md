@@ -79,14 +79,14 @@ We generate puns with the following methods specified by the `system` argument.
 
 All results and logs are saved in `reuslts`.
 ```
-python generate_pun.py data/bookcorpus/edit/bin/data \
+python generate_pun.py combiner-data \
 	--path models/checkpoint_best.pt \
 	--beam 20 --nbest 1 --unkpen 100 \
 	--system rule --task edit \
 	--retriever-model retriever.pkl --doc-file /tmp/sent.tokenized.txt \
 	--lm-path models/wikitext/wiki103.pt \
 	--word-counts-path models/wikitext/dict.txt \
-	--skipgram-model skipgram/dict.txt skipgram/sgns-e15.pt \
+	--skipgram-model skipgram/dict.txt skipgram/model.pt \
 	--num-candidates 500 --num-templates 100 \
 	--num-topic-word 100 --type-consistency-threshold 0.3 \
 	--pun-words pun-data/test.json \
